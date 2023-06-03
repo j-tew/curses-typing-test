@@ -2,6 +2,7 @@
 import curses
 import curses.ascii
 from curses import wrapper
+from random import choices
 
 # def timed_test(duration: int = 30) -> None:
 #     pass
@@ -16,18 +17,24 @@ def menu(ui: curses.window) -> None:
     ui.refresh()
     ui.getkey()
 
+def get_quote(length: int = 10) -> str:
+    with open('words.txt', 'r') as words:
+        wordlist = words.readlines()
+        sample_words = [word.strip() for word in choices(wordlist, k=length)]
+    return ' '.join(sample_words)
+
 def start_test(ui: curses.window) -> None:
-    test_str = 'Horn went "Beep", engine purred. Friendliest sounds you ever heard.'
+    quote = get_quote()
     # Show target string and move cursor to the beginning
-    ui.addstr(test_str)
+    ui.addstr(quote)
     ui.move(0, 0)
     # Get and check characters until the cursor reaches the end
     GREEN, RED = get_colors()
     # Track errors
     errors = 0
-    while (cursor_x := ui.getyx()[1]) < len(test_str):
+    while (cursor_x := ui.getyx()[1]) < len(quote):
         key = ui.getkey()
-        target_char = test_str[cursor_x]
+        target_char = quote[cursor_x]
         match ord(key):
             # Exit on ESC
             case 27:
@@ -36,7 +43,7 @@ def start_test(ui: curses.window) -> None:
             case 127 | 8:
                 cursor_y, cursor_x = ui.getyx()
                 cursor_x -= 1 if cursor_x > 0 else 0
-                ui.addch(cursor_y, cursor_x, test_str[cursor_x])
+                ui.addch(cursor_y, cursor_x, quote[cursor_x])
                 ui.move(cursor_y, cursor_x)
             # Handle SPACE character
             case 32:
@@ -54,6 +61,7 @@ def start_test(ui: curses.window) -> None:
                         errors += 1
                         ui.addstr(key, RED)
         ui.refresh()
+    # Show errors after the test
     ui.addstr(1, 0, f'Errors: {errors}')
     ui.refresh()
     ui.getkey()
@@ -62,14 +70,11 @@ def start_test(ui: curses.window) -> None:
 def main(ui: curses.window) -> None:
     # Fix colors
     curses.use_default_colors()
-
     # Hide cursor
     curses.curs_set(0)
-
     # Show start screen
     ui.clear()
     menu(ui)
-
     # Start the test
     ui.clear()
     start_test(ui)
@@ -84,10 +89,15 @@ if __name__ == '__main__':
 #   - [X] Handle only needed keys
 #   - [X] Track cursor position
 #   - [X] Handle space character (should print if correct character, but underline in red if incorrect)
-#   - [ ] Find text samples
+#   - [X] Find text samples
 #   - [X] Track errors
 #   - [ ] Track time and calulate WPM
 #   - [ ] Accept args for time duration
 #   - [ ] Improve menu
 #   - [X] Fix -x cursor
+#   - [ ] Handle arrow keys bug
+#   - [ ] Handle word wrap
 
+# Future Improvements
+#   - Use quotes from quotable.io as samples
+#   - UI enhancement

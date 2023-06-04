@@ -12,29 +12,42 @@ def get_colors() -> tuple:
     curses.init_pair(2, curses.COLOR_RED, -1)
     return curses.color_pair(1), curses.color_pair(2)
 
+def center_text(text: str) -> tuple:
+    term_y = curses.LINES - 1
+    term_x = curses.COLS - 1
+    cursor_y = term_y // 2
+    cursor_x = term_x // 2 - len(text) // 2
+    return cursor_y, cursor_x
+
 def menu(ui: curses.window) -> None:
-    ui.addstr('Press any key to start...\nPress ESC at any time to exit.')
+    menu_text = 'Press any key to start...'
+    cursor_y, cursor_x = center_text(menu_text)
+    ui.addstr(cursor_y, cursor_x, menu_text)
     ui.refresh()
     ui.getkey()
 
-def get_quote(length: int = 10) -> str:
+def get_text_sample(length: int = 10) -> str:
     with open('words.txt', 'r') as words:
         wordlist = words.readlines()
         sample_words = [word.strip() for word in choices(wordlist, k=length)]
     return ' '.join(sample_words)
 
 def start_test(ui: curses.window) -> None:
-    quote = get_quote()
+    text_sample = get_text_sample()
+    cursor_y, cursor_x = center_text(text_sample)
+    home = cursor_x
+    end = home + len(text_sample)
+    str_loc = [x for x in range(home, end)]
     # Show target string and move cursor to the beginning
-    ui.addstr(quote)
-    ui.move(0, 0)
+    ui.addstr(cursor_y, cursor_x, text_sample)
+    ui.move(cursor_y, home)
     # Get and check characters until the cursor reaches the end
     GREEN, RED = get_colors()
     # Track errors
     errors = 0
-    while (cursor_x := ui.getyx()[1]) < len(quote):
+    while (cursor_x := ui.getyx()[1]) in str_loc:
         key = ui.getkey()
-        target_char = quote[cursor_x]
+        target_char = text_sample[cursor_x - home]
         match ord(key):
             # Exit on ESC
             case 27:
@@ -43,7 +56,7 @@ def start_test(ui: curses.window) -> None:
             case 127 | 8:
                 cursor_y, cursor_x = ui.getyx()
                 cursor_x -= 1 if cursor_x > 0 else 0
-                ui.addch(cursor_y, cursor_x, quote[cursor_x])
+                ui.addch(cursor_y, cursor_x, text_sample[cursor_x - home])
                 ui.move(cursor_y, cursor_x)
             # Handle SPACE character
             case 32:
@@ -71,7 +84,7 @@ def main(ui: curses.window) -> None:
     # Fix colors
     curses.use_default_colors()
     # Hide cursor
-    curses.curs_set(0)
+    # curses.curs_set(0)
     # Show start screen
     ui.clear()
     menu(ui)
@@ -99,5 +112,18 @@ if __name__ == '__main__':
 #   - [ ] Handle word wrap
 
 # Future Improvements
-#   - Use quotes from quotable.io as samples
+#   - Use text_sample from quotable.io as samples
 #   - UI enhancement
+
+'''
+Claculating center of screen.
+
+term_x = curses.COLS
+term_y = curses.LINES
+
+pad_x = num
+pad_y = num
+
+center_x = (term_x - pad_x) // 2
+center_y = (term_y - pad_y) // 2
+'''

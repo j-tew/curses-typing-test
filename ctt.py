@@ -96,7 +96,7 @@ if __name__ == '__main__':
     wrapper(main)
 
 # TODO:
-#   - [ ] Center the text
+#   - [X] Center the text
 #   - [X] Write characters on the same line
 #   - [X] Make inputs overwite with color
 #   - [X] Handle only needed keys
@@ -109,21 +109,8 @@ if __name__ == '__main__':
 #   - [ ] Improve menu
 #   - [X] Fix -x cursor
 #   - [ ] Handle arrow keys bug
-#   - [ ] Handle word wrap
+#   - [ ] Use pads and word wrap
 
 # Future Improvements
 #   - Use text_sample from quotable.io as samples
 #   - UI enhancement
-
-'''
-Claculating center of screen.
-
-term_x = curses.COLS
-term_y = curses.LINES
-
-pad_x = num
-pad_y = num
-
-center_x = (term_x - pad_x) // 2
-center_y = (term_y - pad_y) // 2
-'''

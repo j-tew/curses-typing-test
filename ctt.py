@@ -13,9 +13,10 @@ def get_colors() -> tuple:
     return curses.color_pair(1), curses.color_pair(2)
 
 def center_text(window, text: str) -> tuple:
+    begin_y, begin_x = window.getbegyx()
     win_height, win_width = window.getmaxyx()
-    cursor_y = win_height // 2
-    cursor_x = win_width // 2 - len(text) // 2
+    cursor_y = begin_y // 2 + win_height // 2
+    cursor_x = (begin_x // 2 + win_width // 2) - len(text) // 2
     return cursor_y, cursor_x
 
 def center_win(win_height: int = 13, win_width: int = 80) -> tuple:
@@ -29,9 +30,8 @@ def show_menu(stdscr) -> None:
     stdscr.refresh()
     menu_text = 'Press any key to start...'
     text_y, text_x = center_text(win, menu_text)
-    win.addstr(text_y, text_x, menu_text)
-    win.refresh()
-    win.getch()
+    # win.addstr(text_y, text_x, menu_text)
+    stdscr.getch()
     stdscr.clear()
 
 def get_text_sample(length: int = 10) -> str:

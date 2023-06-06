@@ -12,19 +12,27 @@ def get_colors() -> tuple:
     curses.init_pair(2, curses.COLOR_RED, -1)
     return curses.color_pair(1), curses.color_pair(2)
 
-def center_text(text: str) -> tuple:
-    term_y = curses.LINES - 1
-    term_x = curses.COLS - 1
-    cursor_y = term_y // 2
-    cursor_x = term_x // 2 - len(text) // 2
+def center_text(window, text: str) -> tuple:
+    win_height, win_width = window.getmaxyx()
+    cursor_y = win_height // 2
+    cursor_x = win_width // 2 - len(text) // 2
     return cursor_y, cursor_x
 
-def menu(ui: curses.window) -> None:
+def center_win(win_height: int = 13, win_width: int = 80) -> tuple:
+    begin_y = (curses.LINES - 1) // 2 - win_height // 2
+    begin_x = (curses.COLS - 1) // 2 - win_width // 2
+    return win_height, win_width, begin_y, begin_x
+
+def show_menu(stdscr) -> None:
+    win = curses.newwin(*center_win())
+    win.box()
+    stdscr.refresh()
     menu_text = 'Press any key to start...'
-    cursor_y, cursor_x = center_text(menu_text)
-    ui.addstr(cursor_y, cursor_x, menu_text)
-    ui.refresh()
-    ui.getkey()
+    text_y, text_x = center_text(win, menu_text)
+    win.addstr(text_y, text_x, menu_text)
+    win.refresh()
+    win.getch()
+    stdscr.clear()
 
 def get_text_sample(length: int = 10) -> str:
     with open('words.txt', 'r') as words:
@@ -32,65 +40,63 @@ def get_text_sample(length: int = 10) -> str:
         sample_words = [word.strip() for word in choices(wordlist, k=length)]
     return ' '.join(sample_words)
 
-def start_test(ui: curses.window) -> None:
+def start_test(stdscr) -> None:
+    win = curses.newwin(*center_win())
+    win.box()
     text_sample = get_text_sample()
-    cursor_y, cursor_x = center_text(text_sample)
+    cursor_y, cursor_x = center_text(win, text_sample)
     home = cursor_x
     end = home + len(text_sample)
     str_loc = [x for x in range(home, end)]
-    # Show target string and move cursor to the beginning
-    ui.addstr(cursor_y, cursor_x, text_sample)
-    ui.move(cursor_y, home)
-    # Get and check characters until the cursor reaches the end
+    win.addstr(cursor_y, cursor_x, text_sample)
+    stdscr.move(cursor_y, home)
     GREEN, RED = get_colors()
-    # Track errors
+    global errors
     errors = 0
-    while (cursor_x := ui.getyx()[1]) in str_loc:
-        key = ui.getkey()
+    while (cursor_x := stdscr.getyx()[1]) in str_loc:
+        key = stdscr.getkey()
         target_char = text_sample[cursor_x - home]
         match ord(key):
-            # Exit on ESC
+            # ESC
             case 27:
                 break
-            # Handle BACKSPACE key
+            # BACKSPACE
             case 127 | 8:
-                cursor_y, cursor_x = ui.getyx()
+                cursor_y, cursor_x = stdscr.getyx()
                 cursor_x -= 1 if cursor_x > 0 else 0
-                ui.addch(cursor_y, cursor_x, text_sample[cursor_x - home])
-                ui.move(cursor_y, cursor_x)
-            # Handle SPACE character
+                win.addch(cursor_y, cursor_x, text_sample[cursor_x - home])
+                win.move(cursor_y, cursor_x)
+            # SPACE
             case 32:
                 if key == target_char:
-                    ui.addstr(key)
+                    stdscr.addstr(key)
                 else:
                     errors += 1
-                    ui.addstr(target_char, RED | curses.A_UNDERLINE)
+                    stdscr.addstr(target_char, RED | curses.A_UNDERLINE)
             case _:
-                # Alphanumeric and puncuation characters
+                # Alphanumeric and puncuation
                 if curses.ascii.isalnum(key) or curses.ascii.ispunct(key):
                     if key == target_char:
-                        ui.addstr(key, GREEN)
+                        stdscr.addstr(key, GREEN)
                     else:
                         errors += 1
-                        ui.addstr(key, RED)
-        ui.refresh()
-    # Show errors after the test
-    ui.addstr(1, 0, f'Errors: {errors}')
-    ui.refresh()
-    ui.getkey()
+                        stdscr.addstr(key, RED)
+        win.refresh()
+    stdscr.clear()
+
+def show_results(stdscr):
+    stdscr.addstr(1, 0, f'Errors: {errors}')
+    stdscr.refresh()
+    stdscr.getkey()
 
 
-def main(ui: curses.window) -> None:
-    # Fix colors
+def main(stdscr) -> None:
     curses.use_default_colors()
-    # Hide cursor
     # curses.curs_set(0)
-    # Show start screen
-    ui.clear()
-    menu(ui)
-    # Start the test
-    ui.clear()
-    start_test(ui)
+    stdscr.clear()
+    show_menu(stdscr)
+    start_test(stdscr)
+    show_results(stdscr)
 
 if __name__ == '__main__':
     wrapper(main)
@@ -105,12 +111,14 @@ if __name__ == '__main__':
 #   - [X] Find text samples
 #   - [X] Track errors
 #   - [ ] Track time and calulate WPM
-#   - [ ] Accept args for time duration
-#   - [ ] Improve menu
 #   - [X] Fix -x cursor
-#   - [ ] Handle arrow keys bug
-#   - [ ] Use pads and word wrap
+#   - [ ] Handle arrow keys bug (ord() fails on multicharacter string)
+#   - [ ] Create text window and implement word wrap
+#   - [ ] Improve str_loc workaround
 
 # Future Improvements
 #   - Use text_sample from quotable.io as samples
-#   - UI enhancement
+#   - Accept args for time duration
+#   - Menu/UI enhancement
+#       - Make surrent word stay center with a scrolling pad
+#       - Option selection in menu

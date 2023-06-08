@@ -10,11 +10,6 @@ Window = Any
 # def timed_test(duration: int = 30) -> None:
 #     pass
 
-def get_colors() -> tuple:
-    curses.init_pair(1, curses.COLOR_GREEN, -1)
-    curses.init_pair(2, curses.COLOR_RED, -1)
-    return curses.color_pair(1), curses.color_pair(2)
-
 def centered_window(win_height: int = 13, win_width: int = 80) -> Window:
     begin_y = (curses.LINES - 1) // 2 - win_height // 2
     begin_x = (curses.COLS - 1) // 2 - win_width // 2
@@ -24,19 +19,12 @@ def centered_window(win_height: int = 13, win_width: int = 80) -> Window:
 
 def centered_text(window: Window, text: str) -> tuple:
     win_height, win_width = window.getmaxyx()
-    cursor_y = win_height // 2
-    cursor_x = win_width // 2 - len(text) // 2
-    window.addstr(cursor_y, cursor_x, text)
+    line = win_height // 2
+    end = len(text)
+    begin = win_width // 2 - end // 2
+    window.addstr(line, begin, text)
     window.refresh()
-    return cursor_y, cursor_x
-
-def show_menu() -> None:
-    win = centered_window()
-    win.box()
-    menu_text = 'Press any key to start...'
-    text_y, text_x = centered_text(win, menu_text)
-    win.addstr(text_y, text_x, menu_text)
-    win.getch()
+    return line, begin, end
 
 def get_text_sample(length: int = 10) -> str:
     with open('words.txt', 'r') as words:
@@ -44,59 +32,58 @@ def get_text_sample(length: int = 10) -> str:
         sample_words = [word.strip() for word in choices(wordlist, k=length)]
     return ' '.join(sample_words)
 
-def start_test(stdscr) -> None:
-    global errors
+def main(stdscr) -> None:
+    stdscr.clear()
+    # Colors
+    curses.use_default_colors()
+    curses.init_pair(1, curses.COLOR_GREEN, -1)
+    curses.init_pair(2, curses.COLOR_RED, -1)
+    GREEN = curses.color_pair(1)
+    RED = curses.color_pair(2)
+    # Hide cursor
+    # curses.curs_set(0)
     errors = 0
     window = centered_window()
-    stdscr.refresh()
-    GREEN, RED = get_colors()
+    menu_text = 'Press any key to start...'
+    line, begin, end = centered_text(window, menu_text)
+    window.getch()
     text_sample = get_text_sample()
-    cursor_y, cursor_x = centered_text(window, text_sample)
-    window.move(cursor_y, cursor_x)
-    for i, char in enumerate(text_sample):
-        cursor = window.getyx()
+    line, begin, end = centered_text(window, text_sample)
+    window.move(line, begin)
+    while begin <= (column := window.getyx()[1]) < end:
         key = window.getkey()
+        target_char = text_sample[column - begin]
         match ord(key):
         # Throws error if the key falls out of ASCII range
             # BACKSPACE
             case 127 | 8:
                 try:
-                    prev_char = text_sample[i - 1]
-                    window.move(cursor_y, cursor[1] - 1)
-                    window.addch(prev_char)
+                    prev_char = text_sample[begin + column - 1]
+                    one_back = (line, column - 1)
+                    window.addch(*one_back, prev_char)
+                    window.move(*one_back)
                 except IndexError:
-                    window.move(cursor_y, cursor_x)
+                    window.move(line, begin)
             # SPACE
             case 32:
-                if char == ' ':
-                    window.move(cursor_y, cursor_x + 1)
+                if target_char == ' ':
+                    window.move(line, column + 1)
                 else:
                     errors += 1
-                    window.addstr(char, RED | curses.A_UNDERLINE)
+                    window.addstr(key, RED | curses.A_UNDERLINE)
             case _:
                 # Alphanumeric and puncuation
                 if curses.ascii.isalnum(key) or curses.ascii.ispunct(key):
-                    if key == char:
+                    if key == target_char:
                         window.addstr(key, GREEN)
                     else:
                         errors += 1
                         window.addstr(key, RED)
         window.refresh()
-    stdscr.clear()
-
-def show_results(stdscr):
-    stdscr.addstr(1, 0, f'Errors: {errors}')
-    stdscr.refresh()
-    stdscr.getkey()
-
-
-def main(stdscr) -> None:
-    curses.use_default_colors()
-    # curses.curs_set(0)
-    stdscr.clear()
-    show_menu()
-    start_test(stdscr)
-    show_results(stdscr)
+    window.clear()
+    window.addstr(1, 0, f'Errors: {errors}')
+    window.refresh()
+    window.getkey()
 
 if __name__ == '__main__':
     wrapper(main)

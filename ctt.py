@@ -58,7 +58,7 @@ def main(stdscr) -> None:
             # BACKSPACE
             case 127 | 8:
                 try:
-                    prev_char = text_sample[begin + column - 1]
+                    prev_char = text_sample[column - 1]
                     one_back = (line, column - 1)
                     window.addch(*one_back, prev_char)
                     window.move(*one_back)

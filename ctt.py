@@ -50,7 +50,7 @@ def main(stdscr) -> None:
     text_sample = get_text_sample()
     line, begin, end = centered_text(window, text_sample)
     window.move(line, begin)
-    while begin <= (column := window.getyx()[1]) < end:
+    while begin <= (column := window.getyx()[1]) < end + begin:
         key = window.getkey()
         target_char = text_sample[column - begin]
         match ord(key):
@@ -58,7 +58,7 @@ def main(stdscr) -> None:
             # BACKSPACE
             case 127 | 8:
                 try:
-                    prev_char = text_sample[column - 1]
+                    prev_char = text_sample[column - begin - 1]
                     one_back = (line, column - 1)
                     window.addch(*one_back, prev_char)
                     window.move(*one_back)

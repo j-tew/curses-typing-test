@@ -1,4 +1,4 @@
-# import time
+import time
 import curses
 import curses.ascii
 from curses import wrapper
@@ -32,16 +32,19 @@ def get_text_sample(length: int = 10) -> str:
         sample_words = [word.strip() for word in choices(wordlist, k=length)]
     return ' '.join(sample_words)
 
+def calc_wpm(start: int, end: int, text: str):
+    elapsed = ((end - start) / 1e9) / 60
+    wpm = int(elapsed * len(text))
+    return wpm
+
 def main(stdscr) -> None:
     stdscr.clear()
-    # Colors
     curses.use_default_colors()
     curses.init_pair(1, curses.COLOR_GREEN, -1)
     curses.init_pair(2, curses.COLOR_RED, -1)
     GREEN = curses.color_pair(1)
     RED = curses.color_pair(2)
-    # Hide cursor
-    # curses.curs_set(0)
+    curses.curs_set(0)
     errors = 0
     window = centered_window()
     menu_text = 'Press any key to start...'
@@ -50,16 +53,20 @@ def main(stdscr) -> None:
     text_sample = get_text_sample()
     line, begin, end = centered_text(window, text_sample)
     window.move(line, begin)
+    start = time.time_ns()
     while begin <= (column := window.getyx()[1]) < end + begin:
         key = window.getkey()
         target_char = text_sample[column - begin]
         match ord(key):
-        # Throws error if the key falls out of ASCII range
-            # BACKSPACE
+            # BACKSPACE (possible as function)
             case 127 | 8:
                 try:
-                    prev_char = text_sample[column - begin - 1]
-                    one_back = (line, column - 1)
+                    if column > begin:
+                        prev_char = text_sample[column - begin - 1]
+                        one_back = (line, column - 1)
+                    else:
+                        prev_char = text_sample[0]
+                        one_back = (line, begin)
                     window.addch(*one_back, prev_char)
                     window.move(*one_back)
                 except IndexError:
@@ -72,7 +79,6 @@ def main(stdscr) -> None:
                     errors += 1
                     window.addstr(key, RED | curses.A_UNDERLINE)
             case _:
-                # Alphanumeric and puncuation
                 if curses.ascii.isalnum(key) or curses.ascii.ispunct(key):
                     if key == target_char:
                         window.addstr(key, GREEN)
@@ -80,8 +86,10 @@ def main(stdscr) -> None:
                         errors += 1
                         window.addstr(key, RED)
         window.refresh()
+    end = time.time_ns()
+    wpm = calc_wpm(start, end, text_sample)
     window.clear()
-    window.addstr(1, 0, f'Errors: {errors}')
+    window.addstr(1, 0, f'Errors: {errors}\nWPM: {wpm}')
     window.refresh()
     window.getkey()
 
@@ -101,7 +109,7 @@ if __name__ == '__main__':
 #   - [X] Fix -x cursor
 #   - [ ] Handle arrow keys bug (ord() fails on multicharacter string)
 #   - [ ] Create text window and implement word wrap
-#   - [ ] Improve str_loc workaround
+#   - [X] Improve str_loc workaround
 
 # Future Improvements
 #   - Use text_sample from quotable.io as samples
@@ -109,3 +117,4 @@ if __name__ == '__main__':
 #   - Menu/UI enhancement
 #       - Make surrent word stay center with a scrolling pad
 #       - Option selection in menu
+

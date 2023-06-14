@@ -34,7 +34,7 @@ def get_text_sample(length: int = 10) -> str:
 
 def calc_wpm(start: int, end: int, text: str):
     elapsed = ((end - start) / 1e9) / 60
-    wpm = int(elapsed * len(text))
+    wpm = int((len(text) / elapsed) / 5)
     return wpm
 
 def main(stdscr) -> None:

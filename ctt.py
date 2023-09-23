@@ -89,32 +89,18 @@ def main(stdscr) -> None:
     end = time.time_ns()
     wpm = calc_wpm(start, end, text_sample)
     window.clear()
-    window.addstr(1, 0, f'Errors: {errors}\nWPM: {wpm}')
+
+    error_message = f'Errors: {errors}'
+    line, begin, end = centered_text(window, error_message)
+    next_line = line + 1
+    window.addstr(line, begin, error_message)
+
+    wpm_message = f'WPM: {wpm}'
+    line, begin, end = centered_text(window, error_message)
+    window.addstr(next_line, begin, wpm_message)
     window.refresh()
     window.getkey()
 
 if __name__ == '__main__':
     wrapper(main)
-
-# TODO:
-#   - [X] Center the text
-#   - [X] Write characters on the same line
-#   - [X] Make inputs overwite with color
-#   - [X] Handle only needed keys
-#   - [X] Track cursor position
-#   - [X] Handle space character (should print if correct character, but underline in red if incorrect)
-#   - [X] Find text samples
-#   - [X] Track errors
-#   - [ ] Track time and calulate WPM
-#   - [X] Fix -x cursor
-#   - [ ] Handle arrow keys bug (ord() fails on multicharacter string)
-#   - [ ] Create text window and implement word wrap
-#   - [X] Improve str_loc workaround
-
-# Future Improvements
-#   - Use text_sample from quotable.io as samples
-#   - Accept args for time duration
-#   - Menu/UI enhancement
-#       - Make surrent word stay center with a scrolling pad
-#       - Option selection in menu
 

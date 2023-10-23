@@ -5,102 +5,173 @@ from curses import wrapper
 from random import choices
 from typing import Any
 
-Window = Any
+CursesWindow = Any
 
 # def timed_test(duration: int = 30) -> None:
 #     pass
 
-def centered_window(win_height: int = 13, win_width: int = 80) -> Window:
-    begin_y = (curses.LINES - 1) // 2 - win_height // 2
-    begin_x = (curses.COLS - 1) // 2 - win_width // 2
-    window = curses.newwin(win_height, win_width, begin_y, begin_x)
-    window.box()
-    return window
+def get_colors() -> tuple:
+    """
+    Get the color pairs for green and red text
 
-def centered_text(window: Window, text: str) -> tuple:
-    win_height, win_width = window.getmaxyx()
-    line = win_height // 2
-    end = len(text)
-    begin = win_width // 2 - end // 2
-    window.addstr(line, begin, text)
-    window.refresh()
-    return line, begin, end
-
-def get_text_sample(length: int = 10) -> str:
-    with open('words.txt', 'r') as words:
-        wordlist = words.readlines()
-        sample_words = [word.strip() for word in choices(wordlist, k=length)]
-    return ' '.join(sample_words)
-
-def calc_wpm(start: int, end: int, text: str):
-    elapsed = ((end - start) / 1e9) / 60
-    wpm = int((len(text) / elapsed) / 5)
-    return wpm
-
-def main(stdscr) -> None:
-    stdscr.clear()
-    curses.use_default_colors()
+    Returns
+        A tuple containing the color pairs for green and red text
+            (GREEN, RED)
+    """
     curses.init_pair(1, curses.COLOR_GREEN, -1)
     curses.init_pair(2, curses.COLOR_RED, -1)
-    GREEN = curses.color_pair(1)
-    RED = curses.color_pair(2)
     curses.curs_set(0)
-    errors = 0
-    window = centered_window()
+    return curses.color_pair(1), curses.color_pair(2)
+
+
+def show_menu(stdscr: CursesWindow) -> None:
+    """
+    Render a simple menu that is centered on the screen and wait for keypress
+    """
     menu_text = 'Press any key to start...'
-    line, begin, end = centered_text(window, menu_text)
-    window.getch()
-    text_sample = get_text_sample()
-    line, begin, end = centered_text(window, text_sample)
-    window.move(line, begin)
+    line, begin = centered(stdscr, menu_text)
+    stdscr.clear()
+    stdscr.addstr(line, begin, menu_text)
+    stdscr.refresh()
+    stdscr.getch()
+
+
+def centered(stdscr: CursesWindow, text: str) -> tuple:
+    """
+    Get the coordinates needed to center a text string on the screen
+    
+    Parameters
+        stdscr: CursesWindow
+            The curses window object
+        text: str
+            The text to be rendered in the center of the screen
+    
+    Returns
+        A tuple containing the line number and beginning positions of the string
+    """
+    win_height, win_width = stdscr.getmaxyx()
+    line = win_height // 2
+    begin = win_width // 2 - len(text) // 2
+    return line, begin
+
+
+def get_text_sample(count: int = 10) -> str:
+    """
+    Get a number of words from the wordlist to and return a space separated string
+
+    Parameters
+        count: int, Optional
+            The number of words desired in the string
+
+    Returns
+        A space separated string
+    """
+    with open('words.txt', 'r') as words:
+        wordlist = words.readlines()
+        sample_words = [word.strip() for word in choices(wordlist, k=count)]
+    return ' '.join(sample_words)
+
+
+def calc_wpm(start_time: int, end_time: int, text_length: int) -> int:
+    """
+    Calculate the words per minute of the test
+    
+    Parameters
+        start_time: int
+            The start time in nanoseconds
+        end_time: int
+            The end time in nanoseconds
+        text_length: int
+            The length of the string
+
+    Returns
+        The number of words typed per minute during the test
+    """
+    elapsed = ((end_time - start_time) / 1e9) / 60
+    wpm = int((text_length / elapsed) / 5)
+    return wpm
+
+
+def run_test(stdscr: CursesWindow, text: str) -> tuple:
+    """
+    Run the typing test
+
+    Parameters
+        stdscr: CursesWindow
+            The curses window object
+        text: str
+            The text sample to be used for the test
+    """
+    GREEN, RED = get_colors()
+    line, begin = centered(stdscr, text)
+    stdscr.clear()
+    stdscr.addstr(line, begin, text)
+    stdscr.move(line, begin)
     start = time.time_ns()
-    while begin <= (column := window.getyx()[1]) < end + begin:
-        key = window.getkey()
-        target_char = text_sample[column - begin]
+    errors = 0
+    while begin <= (column := stdscr.getyx()[1]) < len(text) + begin:
+        key = stdscr.getkey()
+        target_char = text[column - begin]
         match ord(key):
-            # BACKSPACE (possible as function)
+            # BACKSPACE
             case 127 | 8:
                 try:
                     if column > begin:
-                        prev_char = text_sample[column - begin - 1]
+                        prev_char = text[column - begin - 1]
                         one_back = (line, column - 1)
                     else:
-                        prev_char = text_sample[0]
+                        prev_char = text[0]
                         one_back = (line, begin)
-                    window.addch(*one_back, prev_char)
-                    window.move(*one_back)
+                    stdscr.addch(*one_back, prev_char)
+                    stdscr.move(*one_back)
                 except IndexError:
-                    window.move(line, begin)
+                    stdscr.move(line, begin)
             # SPACE
             case 32:
                 if target_char == ' ':
-                    window.move(line, column + 1)
+                    stdscr.move(line, column + 1)
                 else:
                     errors += 1
-                    window.addstr(key, RED | curses.A_UNDERLINE)
+                    stdscr.addstr(key, RED | curses.A_UNDERLINE)
             case _:
                 if curses.ascii.isalnum(key) or curses.ascii.ispunct(key):
                     if key == target_char:
-                        window.addstr(key, GREEN)
+                        stdscr.addstr(key, GREEN)
                     else:
                         errors += 1
-                        window.addstr(key, RED)
-        window.refresh()
+                        stdscr.addstr(key, RED)
+        stdscr.refresh()
     end = time.time_ns()
-    wpm = calc_wpm(start, end, text_sample)
-    window.clear()
+    wpm = calc_wpm(start, end, len(text))
+    return wpm, errors
 
-    error_message = f'Errors: {errors}'
-    line, begin, end = centered_text(window, error_message)
-    next_line = line + 1
-    window.addstr(line, begin, error_message)
 
-    wpm_message = f'WPM: {wpm}'
-    line, begin, end = centered_text(window, error_message)
-    window.addstr(next_line, begin, wpm_message)
-    window.refresh()
-    window.getkey()
+def show_results(stdscr: CursesWindow, wpm: int, errors: int) -> None:
+    """
+    Print the results of the test centered on the screen and wait for keypress
+
+    Parameters
+        stdscr: CursesWindow
+            The curses window object
+        wpm: int
+            The words per minute from the test
+        errors: int
+            The count of errors from the test
+    """
+    stdscr.clear()
+    results_message = f'WPM: {wpm} Errors: {errors}'
+    line, begin = centered(stdscr, results_message)
+    stdscr.addstr(line, begin, results_message)
+    stdscr.refresh()
+    stdscr.getkey()
+
+def main(stdscr: CursesWindow) -> None:
+    curses.use_default_colors()
+    show_menu(stdscr)
+    text = get_text_sample()
+    wpm, errors = run_test(stdscr, text)
+    show_results(stdscr, wpm, errors)
+
 
 if __name__ == '__main__':
     wrapper(main)
-
